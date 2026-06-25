@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COMMODITIES TRADER PRO</title>
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #000; color: #ffaa00;
+            font-family: 'VT323', 'Courier New', monospace;
+            padding: 10px;
+        }
+        .container {
+            max-width: 1600px; margin: 0 auto; border: 2px solid #ffaa00;
+            padding: 12px; background: #0a0a0a;
+        }
+        .header {
+            border-bottom: 2px solid #ffaa00; padding-bottom: 10px; margin-bottom: 12px;
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;
+        }
+        .title { font-size: 2rem; font-weight: bold; letter-spacing: 4px; }
+        .blink { animation: blink 1s infinite; }
+        @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+        .main-grid { display: grid; grid-template-columns: 2.5fr 1fr; gap: 12px; }
+        .card { border: 1px solid #ffaa00; padding: 10px; margin-bottom: 10px; background: rgba(255,170,0,0.02); }
+        .card-title { font-size: 0.9rem; font-weight: bold; border-bottom: 1px solid #ffaa00; padding-bottom: 4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .price-display { text-align: center; padding: 15px; border: 1px solid #ffaa00; }
+        .price { font-size: 3rem; font-weight: bold; text-shadow: 0 0 30px rgba(255,170,0,0.1); }
+        .change-positive { color: #33ff33; }
+        .change-negative { color: #ff3333; }
+        #chart-container { height: 500px; border: 1px solid #ffaa00; background: #0a0a0a; position: relative; }
+        .chart-controls {
+            display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px;
+            padding: 4px; background: rgba(255,170,0,0.03); border: 1px solid #ffaa00;
+        }
+        .chart-controls .group { display: flex; gap: 2px; align-items: center; padding: 0 6px; border-right: 1px solid rgba(255,170,0,0.3); }
+        .chart-controls .group:last-child { border-right: none; }
+        .chart-controls .group-label { font-size: 0.55rem; text-transform: uppercase; opacity: 0.5; margin-right: 4px; white-space: nowrap; }
+        .chart-controls button {
+            background: transparent; border: 1px solid #ffaa00; color: #ffaa00;
+            padding: 2px 8px; font-family: 'VT323', monospace; font-size: 0.65rem;
+            cursor: pointer; transition: all 0.2s; white-space: nowrap;
+        }
+        .chart-controls button:hover { background: rgba(255,170,0,0.1); }
+        .chart-controls button.active { background: rgba(255,170,0,0.2); border-color: #ffaa00; }
+        .chart-controls button.btn-indicator { border-color: #4488ff; color: #4488ff; }
+        .chart-controls button.btn-indicator.active { background: rgba(68,136,255,0.2); border-color: #4488ff; }
+        .chart-controls button.btn-osc { border-color: #ff66ff; color: #ff66ff; }
+        .chart-controls button.btn-osc.active { background: rgba(255,102,255,0.2); border-color: #ff66ff; }
+        .input-group { display: flex; gap: 6px; margin: 6px 0; }
+        .input-group input {
+            flex: 1; background: transparent; border: 1px solid #ffaa00; color: #ffaa00;
+            padding: 4px 8px; font-family: 'VT323', monospace; font-size: 0.9rem;
+        }
+        .input-group input:focus { outline: none; background: rgba(255,170,0,0.05); }
+        .btn {
+            background: transparent; border: 1px solid #ffaa00; color: #ffaa00;
+            padding: 4px 12px; font-family: 'VT323', monospace; cursor: pointer; transition: all 0.2s;
+        }
+        .btn:hover { background: rgba(255,170,0,0.1); }
+        .btn-sm { padding: 2px 8px; font-size: 0.65rem; }
+        .quick-buttons { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 4px; }
+        .watchlist-item {
+            display: flex; justify-content: space-between; padding: 4px 8px;
+            border: 1px solid #ffaa00; cursor: pointer; margin-bottom: 2px;
+            background: rgba(255,170,0,0.02); transition: all 0.2s;
+        }
+        .watchlist-item:hover { background: rgba(255,170,0,0.08); }
+        .watchlist-grid { max-height: 200px; overflow-y: auto; }
+        .watchlist-grid::-webkit-scrollbar { width: 4px; }
+        .watchlist-grid::-webkit-scrollbar-thumb { background: #ffaa00; }
+        .signal-box { border: 1px solid #ffaa00; padding: 4px 8px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+        .signal-buy { border-color: #33ff33; background: rgba(51,255,51,0.05); }
+        .signal-sell { border-color: #ff3333; background: rgba(255,51,51,0.05); }
+        .signal-neutral { border-color: #ffaa00; background: rgba(255,170,0,0.05); }
+        .signal-box .signal-icon { font-size: 1.2rem; }
+        .signal-box .signal-content { flex: 1; }
+        .signal-box .signal-content .signal-title { font-weight: bold; font-size: 0.8rem; }
+        .signal-box .signal-content .signal-text { font-size: 0.7rem; opacity: 0.7; }
+        .recommendation-box { border: 2px solid #ffaa00; padding: 10px; text-align: center; margin-top: 8px; }
+        .recommendation-buy { border-color: #33ff33; background: rgba(51,255,51,0.05); }
+        .recommendation-sell { border-color: #ff3333; background: rgba(255,51,51,0.05); }
+        .recommendation-neutral { border-color: #ffaa00; background: rgba(255,170,0,0.05); }
+        .recommendation-box .rec-title { font-size: 1.5rem; font-weight: bold; }
+        .recommendation-box .rec-confidence { font-size: 0.8rem; opacity: 0.7; }
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; margin-top: 8px;
+        }
+        .metric-card {
+            border: 1px solid #ffaa00; padding: 4px; text-align: center;
+            background: rgba(255,170,0,0.02);
+        }
+        .metric-card .label { font-size: 0.5rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; }
+        .metric-card .value { font-size: 1rem; font-weight: bold; margin-top: 2px; }
+        .indicators-grid {
+            display: grid; grid-template-columns: repeat(3,1fr); gap: 4px;
+        }
+        .indicator-box {
+            border: 1px solid #ffaa00; padding: 4px; text-align: center;
+            background: rgba(255,170,0,0.02);
+        }
+        .indicator-box .name { font-size: 0.5rem; text-transform: uppercase; opacity: 0.6; letter-spacing: 1px; }
+        .indicator-box .value { font-size: 0.9rem; font-weight: bold; }
+        .indicator-box .value.bullish { color: #33ff33; }
+        .indicator-box .value.bearish { color: #ff3333; }
+        .indicator-box .value.neutral { color: #ffaa00; }
+        .ind-section-title {
+            font-size: 0.5rem; text-transform: uppercase; opacity: 0.4; letter-spacing: 2px;
+            grid-column: 1 / -1; padding-bottom: 2px; border-bottom: 1px solid rgba(255,170,0,0.15);
+        }
+        .prediction-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 4px; margin-top: 6px; }
+        .prediction-item { text-align: center; padding: 4px; border: 1px solid #ffaa00; background: rgba(255,170,0,0.02); }
+        .prediction-item .day { font-size: 0.5rem; text-transform: uppercase; opacity: 0.6; }
+        .prediction-item .price { font-weight: bold; font-size: 0.8rem; }
+        .prediction-item .change-pred { font-size: 0.6rem; }
+        .footer { border-top: 2px solid #ffaa00; padding-top: 8px; margin-top: 12px; text-align: center; font-size: 0.7rem; opacity: 0.6; }
+        .status-ok { color: #33ff33; }
+        .status-err { color: #ff3333; }
+        .price-info { display: flex; justify-content: center; gap: 15px; font-size: 0.8rem; opacity: 0.7; margin-top: 6px; }
+        .price-info span { display: flex; align-items: center; gap: 4px; }
+        .badge { padding: 2px 8px; border: 1px solid #ffaa00; font-size: 0.6rem; background: rgba(255,170,0,0.05); }
+        .badge-gold { border-color: #ffd700; color: #ffd700; }
+        .badge-oil { border-color: #00ccff; color: #00ccff; }
+        .badge-agri { border-color: #33ff33; color: #33ff33; }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) {
+            .title { font-size: 1.5rem; }
+            .metrics-grid { grid-template-columns: repeat(2,1fr); }
+            .indicators-grid { grid-template-columns: 1fr 1fr; }
+            .price { font-size: 2.2rem; }
+            .prediction-grid { grid-template-columns: repeat(3,1fr); }
+            #chart-container { height: 350px; }
+        }
+        @media (max-width: 480px) {
+            .price { font-size: 1.8rem; }
+            #chart-container { height: 280px; }
+            .chart-controls .group { border-right: none; flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div class="title">🛢️ COMMODITIES PRO <span class="blink">▸</span></div>
+                <div style="font-size:0.6rem;opacity:0.4;letter-spacing:2px;">
+                    <i class="fas fa-chart-line"></i> CHANDELIERS JAPONAIS • ANALYSE TECHNIQUE AVANCÉE
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="badge badge-gold">🥇 MÉTAUX</span>
+                <span class="badge badge-oil">🛢️ ÉNERGIE</span>
+                <span class="badge badge-agri">🌾 AGRICULTURE</span>
+                <span id="status" style="border:1px solid #ffaa00;padding:4px 12px;">⏳ CHARGEMENT...</span>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div>
+                <div class="card">
+                    <div class="price-display">
+                        <div>
+                            <span id="current-symbol" style="font-size:1.5rem;">GC=F</span>
+                            <span id="current-exchange" style="opacity:0.6;font-size:0.9rem;">COMEX</span>
+                            <span id="current-unit" style="opacity:0.4;font-size:0.7rem;margin-left:8px;">(USD/oz)</span>
+                        </div>
+                        <div class="price" id="current-price">--</div>
+                        <div id="current-change">CHARGEMENT...</div>
+                        <div class="price-info">
+                            <span><i class="fas fa-arrow-up" style="color:#33ff33;"></i> HAUT: <strong id="day-high">--</strong></span>
+                            <span><i class="fas fa-arrow-down" style="color:#ff3333;"></i> BAS: <strong id="day-low">--</strong></span>
+                            <span><i class="fas fa-chart-simple"></i> VOLUME: <strong id="volume">--</strong></span>
+                            <span><i class="fas fa-clock"></i> <strong id="last-update">--</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card"><div class="label">OUVERTURE</div><div class="value" id="metric-open">--</div></div>
+                    <div class="metric-card"><div class="label">PRÉCÉDENT</div><div class="value" id="metric-prev">--</div></div>
+                    <div class="metric-card"><div class="label">VAR 5J</div><div class="value" id="metric-5d">--</div></div>
+                    <div class="metric-card"><div class="label">VAR 1M</div><div class="value" id="metric-1m">--</div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">
+                        <span><i class="fas fa-candlestick-chart"></i> CHANDELIERS JAPONAIS</span>
+                        <span class="badge-count" id="chart-badge" style="font-size:0.6rem;border:1px solid #ffaa00;padding:1px 8px;">LIVE</span>
+                    </div>
+                    <div class="chart-controls">
+                        <div class="group">
+                            <span class="group-label">📅 PERIODE</span>
+                            <button class="active" data-period="1d" onclick="changePeriod('1d')">1J</button>
+                            <button data-period="5d" onclick="changePeriod('5d')">5J</button>
+                            <button data-period="1mo" onclick="changePeriod('1mo')">1M</button>
+                            <button data-period="3mo" onclick="changePeriod('3mo')">3M</button>
+                            <button data-period="6mo" onclick="changePeriod('6mo')">6M</button>
+                            <button data-period="1y" onclick="changePeriod('1y')">1A</button>
+                        </div>
+                        <div class="group">
+                            <span class="group-label">📊 OVERLAY</span>
+                            <button class="active btn-indicator" data-indicator="ma" onclick="toggleIndicator('ma')">SMA</button>
+                            <button class="btn-indicator" data-indicator="ema" onclick="toggleIndicator('ema')">EMA</button>
+                            <button class="btn-indicator" data-indicator="bb" onclick="toggleIndicator('bb')">BB</button>
+                            <button class="btn-indicator" data-indicator="sr" onclick="toggleIndicator('sr')">S/R</button>
+                        </div>
+                        <div class="group">
+                            <span class="group-label">📈 OSCILLATEURS</span>
+                            <button class="btn-osc" data-indicator="rsi" onclick="toggleIndicator('rsi')">RSI</button>
+                            <button class="btn-osc" data-indicator="macd" onclick="toggleIndicator('macd')">MACD</button>
+                            <button class="btn-osc" data-indicator="sto" onclick="toggleIndicator('sto')">STO</button>
+                            <button class="btn-osc" data-indicator="volume" onclick="toggleIndicator('volume')">VOL</button>
+                        </div>
+                        <div class="group">
+                            <span class="group-label">🕯️ TYPE</span>
+                            <button class="active" data-type="candle" onclick="changeChartType('candle')">BOUGIES</button>
+                            <button data-type="line" onclick="changeChartType('line')">LIGNE</button>
+                            <button data-type="area" onclick="changeChartType('area')">ZONE</button>
+                        </div>
+                    </div>
+                    <div id="chart-container"></div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-search"></i> RECHERCHE</span></div>
+                    <div class="input-group">
+                        <input type="text" id="symbol-input" placeholder="GC=F" value="GC=F">
+                        <button class="btn" onclick="fetchData()"><i class="fas fa-arrow-right"></i></button>
+                    </div>
+                    <div class="quick-buttons">
+                        <button class="btn btn-sm" onclick="quickSelect('GC=F')">🥇 OR</button>
+                        <button class="btn btn-sm" onclick="quickSelect('SI=F')">ARGENT</button>
+                        <button class="btn btn-sm" onclick="quickSelect('CL=F')">🛢️ WTI</button>
+                        <button class="btn btn-sm" onclick="quickSelect('BZ=F')">BRENT</button>
+                        <button class="btn btn-sm" onclick="quickSelect('NG=F')">GAZ</button>
+                        <button class="btn btn-sm" onclick="quickSelect('ZC=F')">🌽 MAÏS</button>
+                        <button class="btn btn-sm" onclick="quickSelect('ZW=F')">🌾 BLÉ</button>
+                        <button class="btn btn-sm" onclick="quickSelect('ZS=F')">SOJA</button>
+                        <button class="btn btn-sm" onclick="quickSelect('KC=F')">☕ CAFÉ</button>
+                        <button class="btn btn-sm" onclick="quickSelect('CC=F')">CACAO</button>
+                        <button class="btn btn-sm" onclick="quickSelect('DBC')">DBC</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-calculator"></i> INDICATEURS TECHNIQUES</span></div>
+                    <div class="indicators-grid">
+                        <div class="ind-section-title">MOMENTUM</div>
+                        <div class="indicator-box"><div class="name">RSI (14)</div><div class="value" id="ind-rsi">--</div></div>
+                        <div class="indicator-box"><div class="name">MACD</div><div class="value" id="ind-macd">--</div></div>
+                        <div class="indicator-box"><div class="name">MACD SIGNAL</div><div class="value" id="ind-macd-signal">--</div></div>
+                        <div class="ind-section-title">STOCHASTIQUE</div>
+                        <div class="indicator-box"><div class="name">%K (14)</div><div class="value" id="ind-sto-k">--</div></div>
+                        <div class="indicator-box"><div class="name">%D (3)</div><div class="value" id="ind-sto-d">--</div></div>
+                        <div class="indicator-box"><div class="name">MOMENTUM</div><div class="value" id="ind-momentum">--</div></div>
+                        <div class="ind-section-title">MOYENNES MOBILES</div>
+                        <div class="indicator-box"><div class="name">SMA 20</div><div class="value" id="ind-sma20">--</div></div>
+                        <div class="indicator-box"><div class="name">SMA 50</div><div class="value" id="ind-sma50">--</div></div>
+                        <div class="indicator-box"><div class="name">SMA 200</div><div class="value" id="ind-sma200">--</div></div>
+                        <div class="ind-section-title">VOLATILITÉ & NIVEAUX</div>
+                        <div class="indicator-box"><div class="name">VOLATILITÉ</div><div class="value" id="ind-volatility">--</div></div>
+                        <div class="indicator-box"><div class="name">SUPPORT</div><div class="value" id="ind-support">--</div></div>
+                        <div class="indicator-box"><div class="name">RÉSISTANCE</div><div class="value" id="ind-resistance">--</div></div>
+                        <div class="ind-section-title">BANDES DE BOLLINGER</div>
+                        <div class="indicator-box"><div class="name">BB SUP</div><div class="value" id="ind-bb-upper">--</div></div>
+                        <div class="indicator-box"><div class="name">BB MID</div><div class="value" id="ind-bb-mid">--</div></div>
+                        <div class="indicator-box"><div class="name">BB INF</div><div class="value" id="ind-bb-lower">--</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-bullhorn"></i> SIGNAUX</span></div>
+                    <div id="signals-container">
+                        <div class="signal-box signal-neutral">
+                            <span class="signal-icon">⏳</span>
+                            <div class="signal-content">
+                                <div class="signal-title">ANALYSE EN COURS</div>
+                                <div class="signal-text">VEUILLEZ PATIENTER...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="recommendation-container">
+                        <div class="recommendation-box recommendation-neutral">
+                            <div class="rec-title">NEUTRE</div>
+                            <div class="rec-confidence">CONFIANCE: --</div>
+                            <div style="margin-top:6px;display:flex;gap:12px;justify-content:center;font-size:0.8rem;">
+                                <span style="color:#ff3333;">STOP-LOSS: --</span>
+                                <span style="color:#33ff33;">TAKE-PROFIT: --</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-star"></i> WATCHLIST</span><button class="btn btn-sm" onclick="refreshWatchlist()"><i class="fas fa-sync"></i></button></div>
+                    <div id="watchlist" class="watchlist-grid">CHARGEMENT...</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-robot"></i> PRÉDICTIONS (5J)</span></div>
+                    <div class="prediction-grid">
+                        <div class="prediction-item"><div class="day">J+1</div><div class="price" id="pred-1">--</div><div class="change-pred" id="pred-change-1"></div></div>
+                        <div class="prediction-item"><div class="day">J+2</div><div class="price" id="pred-2">--</div><div class="change-pred" id="pred-change-2"></div></div>
+                        <div class="prediction-item"><div class="day">J+3</div><div class="price" id="pred-3">--</div><div class="change-pred" id="pred-change-3"></div></div>
+                        <div class="prediction-item"><div class="day">J+4</div><div class="price" id="pred-4">--</div><div class="change-pred" id="pred-change-4"></div></div>
+                        <div class="prediction-item"><div class="day">J+5</div><div class="price" id="pred-5">--</div><div class="change-pred" id="pred-change-5"></div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><span><i class="fas fa-trophy"></i> TOP PERFORMERS</span></div>
+                    <div id="top-performers">CHARGEMENT...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            COMMODITIES TRADER PRO v2.0 • CHANDELIERS JAPONAIS • ANALYSE TECHNIQUE COMPLÈTE • Données via Yahoo Finance
+        </div>
+    </div>
+
+    <script>
+        var API_BASE = 'http://localhost:5003/api';
+        var currentSymbol = 'GC=F';
+        var currentPeriod = '1d';
+        var chartType = 'candle';
+        var chart = null;
+        var candlesData = [];
+        var indicators = { ma: true, ema: false, bb: false, sr: false, rsi: false, macd: false, sto: false, volume: false };
+        var OSCILLATORS = ['rsi', 'macd', 'sto'];
+
+        function fetchData() {
+            var sym = document.getElementById('symbol-input').value.trim() || 'GC=F';
+            currentSymbol = sym;
+
+            var statusEl = document.getElementById('status');
+            statusEl.textContent = '⏳ CHARGEMENT...';
+            statusEl.style.borderColor = '#ffaa00';
+            statusEl.className = '';
+
+            fetch(API_BASE + '/trading/' + encodeURIComponent(sym))
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        statusEl.textContent = '❌ ' + data.error;
+                        statusEl.style.borderColor = '#ff3333';
+                        statusEl.className = 'status-err';
+                        return;
+                    }
+                    statusEl.textContent = '🟢 CONNECTÉ';
+                    statusEl.style.borderColor = '#33ff33';
+                    statusEl.className = 'status-ok';
+                    updateDisplay(data);
+                    updateChart(data);
+                    fetchInsights(sym);
+                    document.getElementById('last-update').textContent = new Date().toLocaleTimeString('fr-FR');
+                })
+                .catch(err => {
+                    statusEl.textContent = '❌ ERREUR: ' + err.message;
+                    statusEl.style.borderColor = '#ff3333';
+                    statusEl.className = 'status-err';
+                    console.error(err);
+                });
+        }
+
+        function updateDisplay(data) {
+            var pd = data.data[currentPeriod] || data.data['1d'] || data.data['1mo'];
+            if (!pd) return;
+            var st = pd.stats;
+            var candles = pd.candles || [];
+
+            document.getElementById('current-symbol').textContent = data.symbol;
+            document.getElementById('current-exchange').textContent = data.exchange || 'COMEX';
+            document.getElementById('current-price').textContent = '$' + st.current_price.toFixed(2);
+
+            var cls = st.change >= 0 ? 'change-positive' : 'change-negative';
+            var sign = st.change >= 0 ? '+' : '';
+            document.getElementById('current-change').innerHTML =
+                '<span class="' + cls + '">' + sign + st.change_percent.toFixed(2) + '% (' + sign + st.change.toFixed(2) + ')</span>';
+
+            document.getElementById('day-high').textContent = '$' + st.high.toFixed(2);
+            document.getElementById('day-low').textContent = '$' + st.low.toFixed(2);
+
+            var vol = st.volume;
+            if (vol > 1000000) vol = (vol/1000000).toFixed(1) + 'M';
+            else if (vol > 1000) vol = (vol/1000).toFixed(1) + 'K';
+            document.getElementById('volume').textContent = vol;
+
+            document.getElementById('metric-open').textContent = candles.length > 0 ? '$' + candles[0].open.toFixed(2) : '--';
+            document.getElementById('metric-prev').textContent = '$' + (st.current_price - st.change).toFixed(2);
+
+            if (candles.length > 5) {
+                var c5 = ((candles[candles.length-1].close - candles[candles.length-6].close) / candles[candles.length-6].close * 100);
+                document.getElementById('metric-5d').textContent = (c5 >= 0 ? '+' : '') + c5.toFixed(1) + '%';
+            }
+            if (candles.length > 20) {
+                var c1 = ((candles[candles.length-1].close - candles[candles.length-21].close) / candles[candles.length-21].close * 100);
+                document.getElementById('metric-1m').textContent = (c1 >= 0 ? '+' : '') + c1.toFixed(1) + '%';
+            }
+        }
+
+        function updateChart(data) {
+            var pd = data.data[currentPeriod] || data.data['1d'] || data.data['1mo'];
+            if (!pd) return;
+
+            candlesData = pd.candles || [];
+            if (candlesData.length === 0) return;
+
+            var container = document.getElementById('chart-container');
+
+            if (chart) {
+                try { chart.remove(); } catch(e) {}
+                chart = null;
+            }
+
+            var hasOsc = indicators.rsi || indicators.macd || indicators.sto;
+            var hasVol = indicators.volume;
+
+            chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth,
+                height: 500,
+                layout: {
+                    background: { color: '#0a0a0a' },
+                    textColor: '#ffaa00',
+                    fontFamily: "'VT323', monospace"
+                },
+                grid: {
+                    vertLines: { color: '#1a1a1a' },
+                    horzLines: { color: '#1a1a1a' }
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                    vertLine: { color: '#ffaa00', width: 1, style: 2 },
+                    horzLine: { color: '#ffaa00', width: 1, style: 2 },
+                },
+                timeScale: {
+                    borderColor: '#ffaa00',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+                rightPriceScale: {
+                    borderColor: '#ffaa00',
+                    scaleMargins: { top: 0.05, bottom: hasOsc || hasVol ? 0.30 : 0.05 }
+                }
+            });
+
+            // Prix
+            var chartData = candlesData.map(c => ({
+                time: c.time,
+                open: c.open,
+                high: c.high,
+                low: c.low,
+                close: c.close
+            }));
+
+            if (chartType === 'candle') {
+                var series = chart.addCandlestickSeries({
+                    upColor: '#33ff33',
+                    downColor: '#ff3333',
+                    borderUpColor: '#33ff33',
+                    borderDownColor: '#ff3333',
+                    wickUpColor: '#33ff33',
+                    wickDownColor: '#ff3333',
+                    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+                });
+                series.setData(chartData);
+            } else if (chartType === 'line') {
+                var series = chart.addLineSeries({
+                    color: '#ffaa00',
+                    lineWidth: 2,
+                    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+                });
+                series.setData(chartData.map(c => ({ time: c.time, value: c.close })));
+            } else if (chartType === 'area') {
+                var series = chart.addAreaSeries({
+                    topColor: 'rgba(255,170,0,0.3)',
+                    bottomColor: 'rgba(255,170,0,0.01)',
+                    lineColor: '#ffaa00',
+                    lineWidth: 2,
+                    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+                });
+                series.setData(chartData.map(c => ({ time: c.time, value: c.close })));
+            }
+
+            // Volume
+            if (indicators.volume) {
+                var volSeries = chart.addHistogramSeries({
+                    color: '#4488ff',
+                    priceFormat: { type: 'volume' },
+                    priceScaleId: 'volume',
+                    scaleMargins: { top: hasOsc ? 0.85 : 0.75, bottom: 0 },
+                });
+                volSeries.setData(candlesData.map(c => ({
+                    time: c.time,
+                    value: c.volume,
+                    color: c.close >= c.open ? 'rgba(51,255,51,0.3)' : 'rgba(255,51,51,0.3)'
+                })));
+            }
+
+            // Indicateurs calculés localement
+            var ind = computeIndicators(candlesData);
+
+            // Overlays
+            if (indicators.ma && ind.sma20) {
+                addLine(ind.sma20, '#ff66ff', 'SMA20');
+                if (ind.sma50) addLine(ind.sma50, '#ff4488', 'SMA50');
+                if (ind.sma200) addLine(ind.sma200, '#ff2288', 'SMA200');
+            }
+            if (indicators.ema && ind.ema12) {
+                addLine(ind.ema12, '#00ccff', 'EMA12');
+                if (ind.ema26) addLine(ind.ema26, '#ff8800', 'EMA26');
+            }
+            if (indicators.bb && ind.bbUpper) {
+                addLine(ind.bbUpper, 'rgba(68,136,255,0.5)', 'BB+', 2);
+                addLine(ind.bbLower, 'rgba(68,136,255,0.5)', 'BB-', 2);
+                addLine(ind.bbMid, 'rgba(68,136,255,0.3)', 'BBm', 1);
+            }
+            if (indicators.sr && ind.support !== null && ind.resistance !== null) {
+                addLine([ind.support] * candlesData.length, '#33ff33', 'SUPPORT', 1, 2);
+                addLine([ind.resistance] * candlesData.length, '#ff3333', 'RESISTANCE', 1, 2);
+            }
+
+            // Oscillateurs
+            if (indicators.rsi && ind.rsi) {
+                addOscillator(ind.rsi, '#ffff00', 'RSI', 70, 30);
+            }
+            if (indicators.macd && ind.macd) {
+                addOscillator(ind.macd, '#00ccff', 'MACD', null, null);
+                if (ind.macdSignal) addOscillator(ind.macdSignal, '#ff66ff', 'SIG', null, null);
+            }
+            if (indicators.sto && ind.stoK) {
+                addOscillator(ind.stoK, '#00ffcc', '%K', 80, 20);
+                if (ind.stoD) addOscillator(ind.stoD, '#ff4488', '%D', 80, 20);
+            }
+
+            updateIndicatorsPanel(ind);
+            updateSignalsFromIndicators(ind);
+
+            chart.timeScale().fitContent();
+        }
+
+        function addLine(data, color, name, width, style) {
+            try {
+                var series = chart.addLineSeries({
+                    color: color,
+                    lineWidth: width || 1,
+                    lineStyle: style || 0,
+                    priceFormat: { type: 'price', precision: 2, minMove: 0.01 },
+                    lastValueVisible: true,
+                    priceLineVisible: false,
+                    title: name,
+                });
+                var d = [];
+                for (var i = 0; i < candlesData.length && i < data.length; i++) {
+                    if (data[i] !== null && !isNaN(data[i])) {
+                        d.push({ time: candlesData[i].time, value: data[i] });
+                    }
+                }
+                if (d.length > 0) series.setData(d);
+            } catch(e) { console.error('Erreur addLine ' + name, e); }
+        }
+
+        function addOscillator(data, color, name, overbought, oversold) {
+            try {
+                var series = chart.addLineSeries({
+                    color: color,
+                    lineWidth: 1,
+                    priceScaleId: 'oscillator',
+                    scaleMargins: { top: 0.70, bottom: 0.02 },
+                    priceFormat: { type: 'price', precision: 1, minMove: 0.1 },
+                    lastValueVisible: true,
+                    priceLineVisible: false,
+                    title: name,
+                });
+                var d = [];
+                for (var i = 0; i < candlesData.length && i < data.length; i++) {
+                    if (data[i] !== null && !isNaN(data[i])) {
+                        d.push({ time: candlesData[i].time, value: data[i] });
+                    }
+                }
+                if (d.length > 0) series.setData(d);
+
+                if (overbought !== null) {
+                    var ob = chart.addLineSeries({
+                        color: 'rgba(255,51,51,0.3)',
+                        lineWidth: 1,
+                        lineStyle: 2,
+                        priceScaleId: 'oscillator',
+                        scaleMargins: { top: 0.70, bottom: 0.02 },
+                        priceFormat: { type: 'price', precision: 1, minMove: 0.1 },
+                        lastValueVisible: false,
+                        priceLineVisible: false,
+                    });
+                    ob.setData([
+                        { time: candlesData[0].time, value: overbought },
+                        { time: candlesData[candlesData.length-1].time, value: overbought }
+                    ]);
+                }
+                if (oversold !== null) {
+                    var os = chart.addLineSeries({
+                        color: 'rgba(51,255,51,0.3)',
+                        lineWidth: 1,
+                        lineStyle: 2,
+                        priceScaleId: 'oscillator',
+                        scaleMargins: { top: 0.70, bottom: 0.02 },
+                        priceFormat: { type: 'price', precision: 1, minMove: 0.1 },
+                        lastValueVisible: false,
+                        priceLineVisible: false,
+                    });
+                    os.setData([
+                        { time: candlesData[0].time, value: oversold },
+                        { time: candlesData[candlesData.length-1].time, value: oversold }
+                    ]);
+                }
+            } catch(e) { console.error('Erreur addOscillator ' + name, e); }
+        }
+
+        function computeIndicators(candles) {
+            var closes = candles.map(c => c.close);
+            var highs = candles.map(c => c.high);
+            var lows = candles.map(c => c.low);
+            var n = closes.length;
+
+            // SMA
+            function sma(data, period) {
+                var r = [];
+                for (var i = 0; i < data.length; i++) {
+                    if (i < period - 1) { r.push(null); continue; }
+                    var s = 0; for (var j = i - period + 1; j <= i; j++) s += data[j];
+                    r.push(s / period);
+                }
+                return r;
+            }
+
+            // EMA
+            function ema(data, period) {
+                var k = 2 / (period + 1);
+                var r = [data[0]];
+                for (var i = 1; i < data.length; i++) {
+                    r.push(data[i] * k + r[i-1] * (1 - k));
+                }
+                return r;
+            }
+
+            // RSI
+            function rsi(data, period) {
+                var r = []; for (var i = 0; i < data.length; i++) r.push(null);
+                if (data.length < period + 1) return r;
+                var gains = [], losses = [];
+                for (var i = 1; i < data.length; i++) {
+                    var d = data[i] - data[i-1];
+                    gains.push(d > 0 ? d : 0);
+                    losses.push(d < 0 ? -d : 0);
+                }
+                var ag = 0, al = 0;
+                for (var j = 0; j < period; j++) { ag += gains[j]; al += losses[j]; }
+                ag /= period; al /= period;
+                r[period] = al === 0 ? 100 : 100 - (100 / (1 + ag/al));
+                for (var k = period; k < gains.length; k++) {
+                    ag = (ag * (period-1) + gains[k]) / period;
+                    al = (al * (period-1) + losses[k]) / period;
+                    r[k+1] = al === 0 ? 100 : 100 - (100 / (1 + ag/al));
+                }
+                return r;
+            }
+
+            // MACD
+            function macd(data) {
+                var ef = ema(data, 12);
+                var es = ema(data, 26);
+                var ml = [], sl = [];
+                for (var i = 0; i < data.length; i++) {
+                    ml.push(ef[i] - es[i]);
+                }
+                sl = ema(ml, 9);
+                return { macd: ml, signal: sl };
+            }
+
+            // Stochastic
+            function sto(highs, lows, closes, kP, dP) {
+                var kV = []; for (var i = 0; i < closes.length; i++) kV.push(null);
+                for (var i = kP - 1; i < closes.length; i++) {
+                    var hi = -Infinity, lo = Infinity;
+                    for (var j = i - kP + 1; j <= i; j++) {
+                        if (highs[j] > hi) hi = highs[j];
+                        if (lows[j] < lo) lo = lows[j];
+                    }
+                    kV[i] = hi === lo ? 50 : ((closes[i] - lo) / (hi - lo)) * 100;
+                }
+                var dV = []; for (var i = 0; i < closes.length; i++) dV.push(null);
+                for (var k = kP - 1 + dP - 1; k < closes.length; k++) {
+                    var s = 0; for (var l = k - dP + 1; l <= k; l++) s += kV[l];
+                    dV[k] = s / dP;
+                }
+                return { k: kV, d: dV };
+            }
+
+            // Bollinger Bands
+            function bb(data, period, mult) {
+                var mid = sma(data, period);
+                var upper = [], lower = [];
+                for (var i = 0; i < data.length; i++) {
+                    if (mid[i] === null) { upper.push(null); lower.push(null); continue; }
+                    var sq = 0;
+                    for (var j = i - period + 1; j <= i; j++) sq += Math.pow(data[j] - mid[i], 2);
+                    var std = Math.sqrt(sq / period);
+                    upper.push(mid[i] + mult * std);
+                    lower.push(mid[i] - mult * std);
+                }
+                return { upper: upper, lower: lower, mid: mid };
+            }
+
+            // Support/Résistance
+            function sr(highs, lows) {
+                var len = Math.min(30, highs.length);
+                var start = highs.length - len;
+                var sup = Infinity, res = -Infinity;
+                for (var i = start; i < highs.length; i++) {
+                    if (lows[i] < sup) sup = lows[i];
+                    if (highs[i] > res) res = highs[i];
+                }
+                return { support: sup === Infinity ? null : sup, resistance: res === -Infinity ? null : res };
+            }
+
+            // Volatilité
+            function volatility(data) {
+                if (data.length < 20) return 0;
+                var ret = [];
+                for (var i = data.length - 20; i < data.length; i++) {
+                    ret.push((data[i] - data[i-1]) / data[i-1]);
+                }
+                var m = ret.reduce((a,b) => a+b, 0) / ret.length;
+                var v = ret.reduce((a,b) => a + Math.pow(b - m, 2), 0) / ret.length;
+                return Math.sqrt(v * 252) * 100;
+            }
+
+            // Momentum
+            function momentum(data) {
+                if (data.length < 10) return 0;
+                return ((data[data.length-1] - data[data.length-11]) / data[data.length-11]) * 100;
+            }
+
+            var result = {
+                sma20: sma(closes, 20),
+                sma50: sma(closes, 50),
+                sma200: sma(closes, 200),
+                ema12: ema(closes, 12),
+                ema26: ema(closes, 26),
+                rsi: rsi(closes, 14),
+                macd: macd(closes).macd,
+                macdSignal: macd(closes).signal,
+                stoK: sto(highs, lows, closes, 14, 3).k,
+                stoD: sto(highs, lows, closes, 14, 3).d,
+                bbUpper: bb(closes, 20, 2).upper,
+                bbLower: bb(closes, 20, 2).lower,
+                bbMid: bb(closes, 20, 2).mid,
+                support: sr(highs, lows).support,
+                resistance: sr(highs, lows).resistance,
+                volatility: volatility(closes),
+                momentum: momentum(closes)
+            };
+
+            return result;
+        }
+
+        function updateIndicatorsPanel(ind) {
+            var last = ind.rsi ? ind.rsi.length - 1 : 0;
+
+            var rv = ind.rsi && ind.rsi[last];
+            var re = document.getElementById('ind-rsi');
+            re.textContent = rv !== null && !isNaN(rv) ? rv.toFixed(1) : '--';
+            re.className = 'value ' + (rv > 70 ? 'bearish' : rv < 30 ? 'bullish' : 'neutral');
+
+            var mv = ind.macd && ind.macd[last];
+            var me = document.getElementById('ind-macd');
+            me.textContent = mv !== null && !isNaN(mv) ? mv.toFixed(3) : '--';
+            me.className = 'value ' + (mv > 0 ? 'bullish' : mv < 0 ? 'bearish' : 'neutral');
+
+            var sv = ind.macdSignal && ind.macdSignal[last];
+            var se = document.getElementById('ind-macd-signal');
+            se.textContent = sv !== null && !isNaN(sv) ? sv.toFixed(3) : '--';
+            se.className = 'value ' + (sv > 0 ? 'bullish' : sv < 0 ? 'bearish' : 'neutral');
+
+            var kv = ind.stoK && ind.stoK[last];
+            var ke = document.getElementById('ind-sto-k');
+            ke.textContent = kv !== null && !isNaN(kv) ? kv.toFixed(1) : '--';
+            ke.className = 'value ' + (kv > 80 ? 'bearish' : kv < 20 ? 'bullish' : 'neutral');
+
+            var dv = ind.stoD && ind.stoD[last];
+            var de = document.getElementById('ind-sto-d');
+            de.textContent = dv !== null && !isNaN(dv) ? dv.toFixed(1) : '--';
+            de.className = 'value ' + (dv > 80 ? 'bearish' : dv < 20 ? 'bullish' : 'neutral');
+
+            var mom = ind.momentum;
+            var mome = document.getElementById('ind-momentum');
+            mome.textContent = (mom >= 0 ? '+' : '') + (mom !== null && !isNaN(mom) ? mom.toFixed(1) : '--') + '%';
+            mome.className = 'value ' + (mom > 0 ? 'bullish' : mom < 0 ? 'bearish' : 'neutral');
+
+            var s20 = ind.sma20 && ind.sma20[last];
+            document.getElementById('ind-sma20').textContent = s20 !== null && !isNaN(s20) ? s20.toFixed(2) : '--';
+            var s50 = ind.sma50 && ind.sma50[last];
+            document.getElementById('ind-sma50').textContent = s50 !== null && !isNaN(s50) ? s50.toFixed(2) : '--';
+            var s200 = ind.sma200 && ind.sma200[last];
+            document.getElementById('ind-sma200').textContent = s200 !== null && !isNaN(s200) ? s200.toFixed(2) : '--';
+
+            var vol = ind.volatility;
+            var vele = document.getElementById('ind-volatility');
+            vele.textContent = (vol !== null && !isNaN(vol) ? vol.toFixed(1) : '--') + '%';
+            vele.className = 'value ' + (vol > 30 ? 'bearish' : 'bullish');
+
+            document.getElementById('ind-support').textContent = '$' + (ind.support !== null && !isNaN(ind.support) ? ind.support.toFixed(2) : '--');
+            document.getElementById('ind-resistance').textContent = '$' + (ind.resistance !== null && !isNaN(ind.resistance) ? ind.resistance.toFixed(2) : '--');
+
+            var bu = ind.bbUpper && ind.bbUpper[last];
+            document.getElementById('ind-bb-upper').textContent = bu !== null && !isNaN(bu) ? bu.toFixed(2) : '--';
+            var bm = ind.bbMid && ind.bbMid[last];
+            document.getElementById('ind-bb-mid').textContent = bm !== null && !isNaN(bm) ? bm.toFixed(2) : '--';
+            var bl = ind.bbLower && ind.bbLower[last];
+            document.getElementById('ind-bb-lower').textContent = bl !== null && !isNaN(bl) ? bl.toFixed(2) : '--';
+        }
+
+        function updateSignalsFromIndicators(ind) {
+            var signals = [];
+            var last = ind.rsi ? ind.rsi.length - 1 : 0;
+
+            var rsi = ind.rsi && ind.rsi[last];
+            if (rsi !== null && !isNaN(rsi)) {
+                if (rsi < 30) signals.push({ type: 'buy', indicator: 'RSI', message: 'Zone de survente', value: rsi.toFixed(1) });
+                else if (rsi > 70) signals.push({ type: 'sell', indicator: 'RSI', message: 'Zone de surachat', value: rsi.toFixed(1) });
+            }
+
+            if (last > 0 && ind.macd && ind.macdSignal) {
+                var prevDiff = (ind.macd[last-1] || 0) - (ind.macdSignal[last-1] || 0);
+                var currDiff = (ind.macd[last] || 0) - (ind.macdSignal[last] || 0);
+                if (prevDiff < 0 && currDiff >= 0) signals.push({ type: 'buy', indicator: 'MACD', message: 'Croisement haussier', value: currDiff.toFixed(3) });
+                else if (prevDiff > 0 && currDiff <= 0) signals.push({ type: 'sell', indicator: 'MACD', message: 'Croisement baissier', value: currDiff.toFixed(3) });
+            }
+
+            var stk = ind.stoK && ind.stoK[last];
+            var std = ind.stoD && ind.stoD[last];
+            if (stk !== null && !isNaN(stk) && std !== null && !isNaN(std)) {
+                if (stk < 20 && std < 20) signals.push({ type: 'buy', indicator: 'STO', message: 'Zone de survente', value: stk.toFixed(1) + '/' + std.toFixed(1) });
+                else if (stk > 80 && std > 80) signals.push({ type: 'sell', indicator: 'STO', message: 'Zone de surachat', value: stk.toFixed(1) + '/' + std.toFixed(1) });
+            }
+
+            var s20 = ind.sma20 && ind.sma20[last];
+            var s50 = ind.sma50 && ind.sma50[last];
+            if (s20 !== null && !isNaN(s20) && s50 !== null && !isNaN(s50) && last > 0) {
+                var p20 = ind.sma20[last-1], p50 = ind.sma50[last-1];
+                if (p20 !== null && p50 !== null) {
+                    if (p20 <= p50 && s20 > s50) signals.push({ type: 'buy', indicator: 'SMA', message: 'Golden Cross (20>50)', value: s20.toFixed(2) });
+                    else if (p20 >= p50 && s20 < s50) signals.push({ type: 'sell', indicator: 'SMA', message: 'Death Cross (20<50)', value: s20.toFixed(2) });
+                }
+            }
+
+            if (ind.support !== null && ind.resistance !== null && candlesData.length > 0) {
+                var price = candlesData[candlesData.length-1].close;
+                var distSup = ((price - ind.support) / price) * 100;
+                var distRes = ((ind.resistance - price) / price) * 100;
+                if (distSup < 1.5) signals.push({ type: 'buy', indicator: 'Support', message: 'Proximité support', value: distSup.toFixed(1) + '%' });
+                if (distRes < 1.5) signals.push({ type: 'sell', indicator: 'Résistance', message: 'Proximité résistance', value: distRes.toFixed(1) + '%' });
+            }
+
+            if (signals.length === 0) {
+                signals.push({ type: 'neutral', indicator: 'GLOBAL', message: 'Aucun signal actif', value: '--' });
+            }
+
+            updateSignalsDisplay(signals);
+            updateRecommendation(signals, ind);
+        }
+
+        function updateSignalsDisplay(signals) {
+            var c = document.getElementById('signals-container');
+            var h = '';
+            for (var i = 0; i < signals.length; i++) {
+                var s = signals[i];
+                var cls = s.type === 'buy' ? 'signal-buy' : s.type === 'sell' ? 'signal-sell' : 'signal-neutral';
+                var icon = s.type === 'buy' ? '🟢' : s.type === 'sell' ? '🔴' : '🟡';
+                h += '<div class="signal-box ' + cls + '">';
+                h += '<span class="signal-icon">' + icon + '</span>';
+                h += '<div class="signal-content">';
+                h += '<div class="signal-title">' + s.type.toUpperCase() + ' - ' + s.indicator + '</div>';
+                h += '<div class="signal-text">' + s.message + ' (' + s.value + ')</div>';
+                h += '</div></div>';
+            }
+            c.innerHTML = h;
+        }
+
+        function updateRecommendation(signals, ind) {
+            var buys = signals.filter(s => s.type === 'buy').length;
+            var sells = signals.filter(s => s.type === 'sell').length;
+
+            var rec = buys > sells ? 'ACHAT' : sells > buys ? 'VENTE' : 'NEUTRE';
+            var conf = Math.min(95, Math.max(15, Math.abs(buys - sells) * 15 + 40));
+            var price = candlesData.length > 0 ? candlesData[candlesData.length-1].close : 0;
+
+            var sl = rec === 'ACHAT' ? price * 0.975 : price * 1.025;
+            var tp = rec === 'ACHAT' ? price * 1.05 : price * 0.975;
+
+            if (ind.support && rec === 'ACHAT') sl = ind.support;
+            if (ind.resistance && rec === 'VENTE') sl = ind.resistance;
+            if (ind.resistance && rec === 'ACHAT') tp = ind.resistance;
+            if (ind.support && rec === 'VENTE') tp = ind.support;
+
+            var recClass = rec === 'ACHAT' ? 'recommendation-buy' : rec === 'VENTE' ? 'recommendation-sell' : 'recommendation-neutral';
+            var color = rec === 'ACHAT' ? '#33ff33' : rec === 'VENTE' ? '#ff3333' : '#ffaa00';
+
+            document.getElementById('recommendation-container').innerHTML =
+                '<div class="recommendation-box ' + recClass + '">' +
+                    '<div class="rec-title" style="color:' + color + ';">' + rec + '</div>' +
+                    '<div class="rec-confidence">CONFIANCE: ' + conf + '%</div>' +
+                    '<div style="margin-top:6px;display:flex;gap:12px;justify-content:center;font-size:0.8rem;">' +
+                        '<span style="color:#ff3333;">STOP-LOSS: $' + (sl !== null && !isNaN(sl) ? sl.toFixed(2) : '--') + '</span>' +
+                        '<span style="color:#33ff33;">TAKE-PROFIT: $' + (tp !== null && !isNaN(tp) ? tp.toFixed(2) : '--') + '</span>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        function fetchInsights(symbol) {
+            fetch(API_BASE + '/insights-advanced/' + encodeURIComponent(symbol))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) return;
+                    updatePredictions(data);
+                    if (data.volatility !== undefined) {
+                        document.getElementById('ind-volatility').textContent = data.volatility.toFixed(1) + '%';
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+
+        function updatePredictions(data) {
+            var preds = data.predictions || [];
+            var cp = data.current_price || 0;
+            for (var i = 0; i < 5; i++) {
+                var el = document.getElementById('pred-' + (i + 1));
+                var ce = document.getElementById('pred-change-' + (i + 1));
+                if (i < preds.length) {
+                    var p = preds[i];
+                    var ch = ((p - cp) / cp * 100);
+                    var cc = ch > 0 ? '#33ff33' : ch < 0 ? '#ff3333' : '#ffaa00';
+                    el.textContent = '$' + p.toFixed(2);
+                    el.style.color = cc;
+                    ce.textContent = (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%';
+                    ce.style.color = cc;
+                } else {
+                    el.textContent = '--';
+                    el.style.color = '';
+                    ce.textContent = '';
+                    ce.style.color = '';
+                }
+            }
+        }
+
+        function changePeriod(period) {
+            currentPeriod = period;
+            document.querySelectorAll('[data-period]').forEach(b => b.classList.toggle('active', b.dataset.period === period));
+            fetchData();
+        }
+
+        function toggleIndicator(key) {
+            if (OSCILLATORS.indexOf(key) !== -1) {
+                if (indicators[key]) {
+                    indicators[key] = false;
+                } else {
+                    OSCILLATORS.forEach(k => indicators[k] = false);
+                    indicators[key] = true;
+                }
+            } else {
+                indicators[key] = !indicators[key];
+            }
+            document.querySelectorAll('[data-indicator]').forEach(b => {
+                var k = b.dataset.indicator;
+                b.classList.toggle('active', indicators[k] === true);
+            });
+            if (candlesData.length > 0) {
+                var data = { data: {} };
+                data.data[currentPeriod] = { candles: candlesData };
+                updateChart(data);
+            }
+        }
+
+        function changeChartType(type) {
+            chartType = type;
+            document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+            if (candlesData.length > 0) {
+                var data = { data: {} };
+                data.data[currentPeriod] = { candles: candlesData };
+                updateChart(data);
+            }
+        }
+
+        function quickSelect(symbol) {
+            document.getElementById('symbol-input').value = symbol;
+            fetchData();
+        }
+
+        function refreshWatchlist() {
+            fetch(API_BASE + '/watchlist')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        document.getElementById('watchlist').textContent = '❌ INDISPONIBLE';
+                        return;
+                    }
+                    var html = '';
+                    data.forEach(item => {
+                        if (item.error) return;
+                        var cls = item.changePercent >= 0 ? 'change-positive' : 'change-negative';
+                        var sign = item.changePercent >= 0 ? '+' : '';
+                        html += '<div class="watchlist-item" onclick="quickSelect(\'' + item.symbol + '\')">';
+                        html += '<span>' + item.symbol + ' ' + (item.name || '') + '</span>';
+                        html += '<span>$' + item.price.toFixed(2) + ' <span class="' + cls + '">' + sign + item.changePercent.toFixed(1) + '%</span></span>';
+                        html += '</div>';
+                    });
+                    document.getElementById('watchlist').innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('watchlist').textContent = '❌ ERREUR';
+                    console.error(err);
+                });
+        }
+
+        function refreshTopPerformers() {
+            fetch(API_BASE + '/top-performers')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.error) {
+                        document.getElementById('top-performers').textContent = '❌ INDISPONIBLE';
+                        return;
+                    }
+                    var html = '';
+                    data.forEach((item, idx) => {
+                        var cls = item.changePercent >= 0 ? 'change-positive' : 'change-negative';
+                        var sign = item.changePercent >= 0 ? '+' : '';
+                        var star = idx === 0 ? '🏆 ' : '';
+                        html += '<div class="watchlist-item" onclick="quickSelect(\'' + item.symbol + '\')">';
+                        html += '<span>' + star + item.symbol + ' ' + (item.name || '') + '</span>';
+                        html += '<span>$' + item.price.toFixed(2) + ' <span class="' + cls + '">' + sign + item.changePercent.toFixed(1) + '%</span></span>';
+                        html += '</div>';
+                    });
+                    document.getElementById('top-performers').innerHTML = html;
+                })
+                .catch(err => {
+                    document.getElementById('top-performers').textContent = '❌ ERREUR';
+                    console.error(err);
+                });
+        }
+
+        function resizeChart() {
+            if (chart) {
+                var container = document.getElementById('chart-container');
+                try {
+                    chart.resize(container.clientWidth, 500);
+                } catch(e) {}
+            }
+        }
+
+        window.addEventListener('load', function() {
+            if (typeof LightweightCharts === 'undefined') {
+                document.getElementById('status').textContent = '❌ LIB NON CHARGÉE';
+                return;
+            }
+            fetchData();
+            refreshWatchlist();
+            refreshTopPerformers();
+            setInterval(fetchData, 60000);
+            setInterval(refreshWatchlist, 120000);
+            setInterval(refreshTopPerformers, 120000);
+            setTimeout(resizeChart, 200);
+        });
+
+        window.addEventListener('resize', function() {
+            resizeChart();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && document.activeElement.id === 'symbol-input') fetchData();
+        });
+    </script>
+</body>
+</html>
