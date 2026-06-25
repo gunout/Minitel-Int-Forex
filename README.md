@@ -13,7 +13,7 @@
 
      pip install -r requirements.txt 
 
-# 4 . RUN THE SERVER ON LOCALHOST:5003 
+# 4 . RUN THE SERVER ON LOCALHOST:5004
 
      python serv.py
 
