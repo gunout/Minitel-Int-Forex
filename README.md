@@ -3,11 +3,11 @@
 
 # 1 . CREATE PYTHON VENV 
 
-     python -m venv com
+     python -m venv for
 
 # 2 . ACTIVATE VENV PYTHON
 
-     source com/bin/activate
+     source for/bin/activate
 
 # 3 . INSTALL LIBRARIES 
 
